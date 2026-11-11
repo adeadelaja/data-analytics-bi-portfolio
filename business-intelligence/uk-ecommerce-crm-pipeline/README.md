@@ -93,10 +93,9 @@ Record-level remediation worklist. Every transaction failing one or more hygiene
 | `sql_3a_data_hygiene_scorecard.csv` | `data/processed/` | Query 3a results |
 | `sql_3b_data_hygiene_detail.csv` | `data/processed/` | Query 3b results |
 | `analytical_queries.sql` | `sql/` | Full SQLite analytics layer |
-| Power BI Dashboard | `powerbi/` | *(In progress — will be updated on completion)* |
 
 ---
 
 ## Tech Stack
 
-Python (Pandas) · SQLite 3.35+ · Advanced SQL (CTEs, window functions, CHECK constraints) · Power BI *(in progress)* · Revenue Operations · Data Contract Design · CRM Data Governance
+Python (Pandas) · SQLite 3.35+ · Advanced SQL (CTEs, window functions, CHECK constraints) · Revenue Operations · Data Contract Design · CRM Data Governance
