@@ -32,7 +32,7 @@ Metadata attributes (account titles, industry codes, and entity IDs) regularly d
 ---
 
 ## 🖼️ Visual Evidence
-![Every record checked against reference data, formula bar visible. Synthetic records, real structure.](images/compliance-tracker-overview.png)
+![Every record checked against reference data, formula bar visible. Synthetic records, real structure.](images/sap-p1-formula.png)
 *Every record checked against reference data, formula bar visible. Synthetic records, real structure.*
 
 ---

@@ -49,5 +49,5 @@ The reporting engine processes raw Salesforce opportunity exports using over **3
 ---
 
 ## 📁 Project Assets & Files
-* **Cleaned Workbook:** `Salesforce_Admin_Dashboard_CLEANED.xlsx` (Located in `/files/` folder - *100% Synthetic Data*)
+* **Cleaned Workbook:** `Salesforce_Admin_Dashboard_file.xlsx` (Located in `/files/` folder - *100% Synthetic Data*)
 * **Visual Evidence:** `salesforce-admin-dashboard-overview.png` (Located in `/images/` folder)
