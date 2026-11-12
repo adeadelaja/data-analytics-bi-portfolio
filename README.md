@@ -34,7 +34,7 @@ My career is anchored in the intersection of data, technology, and business stra
 | Project | Description | Stack |
 | :--- | :--- | :--- |
 | [Salesforce Pipeline Quality & Admin Dashboard Engine](business-intelligence/salesforce-pipeline-dashboard/) | Enterprise-grade pipeline audit and governance engine running 5 automated validation checks across 3,000+ formulas. Replicates the exact logic used to lift global pipeline data quality by 5% across 7 regions and 100+ sales reps at SAP Emarsys. | Excel, Salesforce CRM |
-| [UK E-Commerce CRM Pipeline & Revenue Leakage Model](business-intelligence/uk-ecommerce-crm-pipeline/) | End-to-end ingestion and analytics pipeline detecting revenue leakage drivers across e-commerce transactions. Includes a 9-rule automated data hygiene framework, probability-weighted forecasting, and quarantine logic that isolated 826 non-compliant records. | Python, SQLite, Pandas |
+| [UK E-Commerce CRM Pipeline & Revenue Leakage Model](business-intelligence/uk-ecommerce-crm-pipeline/) | End-to-end ingestion and analytics pipeline detecting revenue leakage drivers across e-commerce transactions. Includes a 10 rule automated data hygiene framework, friction weighted forecasting, quarantine logic that isolated 826 non compliant records, and a Power BI semantic model reconciled to the penny across 21 tested figures. | Python, SQLite, Pandas, Power BI, DAX |
 
 ### Data Analytics
 
