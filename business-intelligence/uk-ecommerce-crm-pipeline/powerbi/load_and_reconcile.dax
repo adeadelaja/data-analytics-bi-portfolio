@@ -1,0 +1,139 @@
+// ============================================================================
+// Project Nexus | Load all measures + reconcile in one pass
+// Paste into DAX query view > Run > check every row says PASS
+// Then click "Update model with changes" to save the measures into _Measures
+// ============================================================================
+DEFINE
+    // 1. CORE VOLUME
+    MEASURE '_Measures'[Total Pipeline £] =
+        SUM ( FactPipeline[Revenue_Amount_GBP] )
+    MEASURE '_Measures'[Deal Count] =
+        COUNTROWS ( FactPipeline )
+
+    // 2. REVENUE LEAKAGE
+    MEASURE '_Measures'[Leakage £] =
+        CALCULATE ( [Total Pipeline £], FactPipeline[Deal_Stage] = "Closed-Lost" )
+    MEASURE '_Measures'[Lost Deals] =
+        CALCULATE ( [Deal Count], FactPipeline[Deal_Stage] = "Closed-Lost" )
+    MEASURE '_Measures'[Leakage %] =
+        DIVIDE ( [Leakage £], [Total Pipeline £] )
+    MEASURE '_Measures'[Leakage Share of Total %] =
+        DIVIDE (
+            [Leakage £],
+            CALCULATE ( [Leakage £], REMOVEFILTERS ( FactPipeline[Friction_Reason] ) )
+        )
+    MEASURE '_Measures'[Avg Lost Deal £] =
+        DIVIDE ( [Leakage £], [Lost Deals] )
+    MEASURE '_Measures'[Avg Response Hrs (Lost to Delay)] =
+        CALCULATE (
+            AVERAGE ( FactPipeline[Response_Time_Hours] ),
+            FactPipeline[Deal_Stage] = "Closed-Lost",
+            FactPipeline[Friction_Reason] = "Response Delay"
+        )
+    MEASURE '_Measures'[SLA Breach %] =
+        VAR Measured =
+            CALCULATE ( [Deal Count], NOT ISBLANK ( FactPipeline[Response_Time_Hours] ) )
+        VAR Breached =
+            CALCULATE ( [Deal Count], FactPipeline[Response_Time_Hours] > 24 )
+        RETURN
+            DIVIDE ( Breached, Measured )
+
+    // 3. WHAT IF: RECOVERABLE REVENUE
+    MEASURE '_Measures'[Response Delay Leakage £] =
+        CALCULATE ( [Leakage £], FactPipeline[Friction_Reason] = "Response Delay" )
+    MEASURE '_Measures'[Recoverable Revenue £] =
+        [Response Delay Leakage £] * [Recovery Rate Value]
+
+    // 4. PIPELINE AND FORECAST
+    MEASURE '_Measures'[Won Revenue £] =
+        CALCULATE ( [Total Pipeline £], FactPipeline[Deal_Stage] = "Closed-Won" )
+    MEASURE '_Measures'[Open Pipeline £] =
+        CALCULATE ( [Total Pipeline £], FactPipeline[Deal_Stage] = "Open" )
+    MEASURE '_Measures'[Open Deals] =
+        CALCULATE ( [Deal Count], FactPipeline[Deal_Stage] = "Open" )
+    MEASURE '_Measures'[Weighted Open £] =
+        SUMX (
+            FILTER ( FactPipeline, FactPipeline[Deal_Stage] = "Open" ),
+            FactPipeline[Revenue_Amount_GBP] * 0.40
+                * SWITCH (
+                    FactPipeline[Friction_Reason],
+                    "Response Delay", 0.50,
+                    "Warehouse Stockout", 0.40,
+                    "Navigation Friction", 0.60,
+                    1.00
+                )
+        )
+    MEASURE '_Measures'[Expected Revenue £] =
+        [Won Revenue £] + [Weighted Open £]
+    MEASURE '_Measures'[Open Deals At Risk] =
+        CALCULATE (
+            [Open Deals],
+            FactPipeline[Friction_Reason]
+                IN { "Response Delay", "Warehouse Stockout", "Navigation Friction" }
+        )
+    MEASURE '_Measures'[Win Rate %] =
+        VAR Won = CALCULATE ( [Deal Count], FactPipeline[Deal_Stage] = "Closed-Won" )
+        VAR Lost = [Lost Deals]
+        RETURN
+            DIVIDE ( Won, Won + Lost )
+
+    // 5. DATA QUALITY
+    MEASURE '_Measures'[Quarantined Records] =
+        DISTINCTCOUNT ( Quarantine[Record_ID] )
+    MEASURE '_Measures'[Rejection Reason Count] =
+        COUNTROWS ( Quarantine )
+    MEASURE '_Measures'[Pipeline Pass Rate %] =
+        VAR CleanRows = CALCULATE ( [Deal Count], REMOVEFILTERS () )
+        VAR Rejected = CALCULATE ( [Quarantined Records], REMOVEFILTERS () )
+        RETURN
+            DIVIDE ( CleanRows, CleanRows + Rejected )
+    MEASURE '_Measures'[Hygiene Checks Failing] =
+        CALCULATE ( COUNTROWS ( Hygiene ), Hygiene[Status] = "FAIL" )
+    MEASURE '_Measures'[Hygiene Status Colour] =
+        SWITCH (
+            SELECTEDVALUE ( Hygiene[Status] ),
+            "PASS", "#2E7D32",
+            "WARN", "#ED8B00",
+            "FAIL", "#C62828"
+        )
+
+    // 6. RECONCILIATION: Power BI leakage minus SQL leakage (should be 0)
+    MEASURE '_Measures'[SQL Reconciliation Gap £] =
+        [Leakage £] - SUM ( SQL_LeakageAudit[Closed_Lost_Revenue_GBP] )
+
+// ----------------------------------------------------------------------------
+// RECONCILIATION TEST: every row must say PASS
+// Columns: name, actual, target, decimal places to compare at
+// ----------------------------------------------------------------------------
+EVALUATE
+SELECTCOLUMNS (
+    {
+        ( "Total Pipeline £",                 [Total Pipeline £],                 1178155.39, 2 ),
+        ( "Deal Count",                       [Deal Count],                       4274,       0 ),
+        ( "Leakage £",                        [Leakage £],                        424692.27,  2 ),
+        ( "Leakage %",                        [Leakage %],                        0.360,      3 ),
+        ( "Lost Deals",                       [Lost Deals],                       1480,       0 ),
+        ( "Avg Response Hrs (Lost to Delay)", [Avg Response Hrs (Lost to Delay)], 86.4,       1 ),
+        ( "SLA Breach %",                     [SLA Breach %],                     0.183,      3 ),
+        ( "Response Delay Leakage £",         [Response Delay Leakage £],         161266.20,  2 ),
+        ( "Recoverable Revenue £ (50%)",      [Recoverable Revenue £],            80633.10,   2 ),
+        ( "Won Revenue £",                    [Won Revenue £],                    554166.93,  2 ),
+        ( "Win Rate %",                       [Win Rate %],                       0.578,      3 ),
+        ( "Open Pipeline £",                  [Open Pipeline £],                  199296.19,  2 ),
+        ( "Open Deals",                       [Open Deals],                       766,        0 ),
+        ( "Weighted Open £",                  [Weighted Open £],                  74472.32,   2 ),
+        ( "Expected Revenue £",               [Expected Revenue £],               628639.25,  2 ),
+        ( "Open Deals At Risk",               [Open Deals At Risk],               115,        0 ),
+        ( "Quarantined Records",              [Quarantined Records],              826,        0 ),
+        ( "Pipeline Pass Rate %",             [Pipeline Pass Rate %],             0.838,      3 ),
+        ( "Hygiene Checks Failing",           [Hygiene Checks Failing],           2,          0 ),
+        ( "SQL Reconciliation Gap £",         [SQL Reconciliation Gap £] + 0,     0,          2 ),
+        ( "Deals outside Calendar",
+            COUNTROWS ( FILTER ( FactPipeline, ISBLANK ( RELATED ( 'Calendar'[Date] ) ) ) ) + 0,
+            0, 0 )
+    },
+    "Check",  [Value1],
+    "Actual", [Value2],
+    "Target", [Value3],
+    "Result", IF ( ROUND ( [Value2], [Value4] ) = [Value3], "PASS", "FAIL" )
+)
